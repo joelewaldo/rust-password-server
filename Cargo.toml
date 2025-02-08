@@ -4,11 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+aes-gcm = "0.10.3"
 axum = {version = "0.8.1", features = ["tracing"]}
-bcrypt = "0.17.0"
+base64 = "0.22.1"
+chrono = "0.4.39"
+cipher = "0.4.4"
 dotenvy = "0.15.7"
+pbkdf2 = "0.12.2"
+rand = "0.9.0"
 serde = "1.0.217"
 serde_json = "1.0.138"
+sha2 = "0.10.8"
 sqlx = { version = "0.8.3", features = ["runtime-tokio-native-tls", "postgres", "macros"]}
 tokio = { version = "1.43.0", features = ["full"] }
 tower-http = { version = "0.6.2", features = ["timeout", "trace"] }
