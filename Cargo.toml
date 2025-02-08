@@ -9,9 +9,8 @@ bcrypt = "0.17.0"
 dotenvy = "0.15.7"
 serde = "1.0.217"
 serde_json = "1.0.138"
-sqlx = "0.8.3"
+sqlx = { version = "0.8.3", features = ["runtime-tokio-native-tls", "postgres", "macros"]}
 tokio = { version = "1.43.0", features = ["full"] }
-tokio-postgres = "0.7.13"
 tower-http = { version = "0.6.2", features = ["timeout", "trace"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }

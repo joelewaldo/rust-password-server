@@ -1,10 +1,9 @@
-use tokio_postgres::{NoTls, Error};
 use crate::bounded_context::infrastructure::{http::run_server, config::app_config};
 
 mod bounded_context;
 
 #[tokio::main]
-async fn main() -> Result<(), Error> {
+async fn main() -> std::io::Result<()> {
     // dotenvy::dotenv().ok();
 
     // let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
