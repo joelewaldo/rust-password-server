@@ -5,8 +5,8 @@ use uuid::Uuid;
 pub struct Password {
     pub id: Uuid,
     pub service: String,
-    pub encrypted_password: String,
-    pub salt: Vec<u8>,
+    pub nonce: String,
+    pub cipher: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>
 }

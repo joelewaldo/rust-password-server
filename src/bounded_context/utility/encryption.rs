@@ -1,19 +1,46 @@
-use aes_gcm::Aes256Gcm;
-use cipher::KeyInit;
-use pbkdf2::pbkdf2;
+use aes_gcm::{
+    aead::{Aead, AeadCore, KeyInit, OsRng},
+    Aes256Gcm, Nonce, Key
+};
 
-fn generate_key(master_key: &[u8], salt: &[u8]) -> Aes256Gcm {
-    let mut cipher = Aes256Gcm::new(&[]);
-    pbkdf2::<_, _, sha2::Sha256>(master_key, salt, 100_000, &mut cipher);
-    cipher
+use hex;
+
+const NONCE_SIZE: usize = 12;
+const MASTER_KEY_SIZE: usize = 32;
+
+pub fn generate_key() -> String {
+    let key_bytes: [u8; MASTER_KEY_SIZE] = Aes256Gcm::generate_key(OsRng).into();
+
+    hex::encode(key_bytes)
 }
 
-fn encrypt(cipher: &Aes256Gcm, plaintext: &[u8]) -> Vec<u8> {
-    let nonce = cipher.nonce();
-    cipher.encrypt(nonce, plaintext)
+pub fn encrypt(master_key: &str, password: String) -> (String, String) {
+    assert_eq!(master_key.len(), MASTER_KEY_SIZE);
+
+    let key_bytes = master_key.as_bytes();
+    let key = Key::<Aes256Gcm>::from_slice(key_bytes);
+    let cipher = Aes256Gcm::new(key);
+
+    // Random Nonce
+    let nonce_bytes: [u8; NONCE_SIZE] = Aes256Gcm::generate_nonce(OsRng).into();
+    let nonce = Nonce::from_slice(&nonce_bytes); 
+    let cipher_text = cipher.encrypt(nonce, password.as_bytes()).expect("Failed to Encrypt");
+
+    (hex::encode(nonce_bytes), hex::encode(cipher_text))    
 }
 
-fn decrypt(cipher: &Aes256Gcm, ciphertext: &[u8]) -> Result<Vec<u8>, aes_gcm::Error> {
-    let nonce = cipher.nonce();
-    cipher.decrypt(nonce, ciphertext)
+pub fn decrypt(master_key: &str, nonce_hex: &str, cipher_hex: &str) -> String {
+   assert_eq!(master_key.len(), MASTER_KEY_SIZE);
+
+   let key_bytes = master_key.as_bytes();
+   let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
+   let cipher = Aes256Gcm::new(key);
+
+   let nonce_bytes = hex::decode(nonce_hex).expect("Invalid Nonce Hex");
+   let nonce = Nonce::from_slice(&nonce_bytes);
+   let cipher_text = hex::decode(cipher_hex).expect("Invalid Cipher Hex");
+
+   let password = cipher.decrypt(nonce, cipher_text.as_ref()).expect("Decryption Failed");
+   
+   String::from_utf8(password).expect("Invalid UTF-8")
 }
