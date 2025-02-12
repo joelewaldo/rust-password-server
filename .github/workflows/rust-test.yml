@@ -23,6 +23,11 @@ jobs:
           - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
 
     steps:
+      - name: Ensure permissions for docker/init.sql
+        run: |
+          sudo chmod -R 755 ./docker
+          sudo chown -R $USER:$USER ./docker
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
