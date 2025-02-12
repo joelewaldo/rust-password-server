@@ -1,4 +1,4 @@
-name: Run Tests in Docker
+name: Run Tests
 
 on:
   push:
@@ -17,10 +17,10 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
         ports:
-          - 6970:5432
+          - "6970:5432"
         volumes:
           - pgdata_test:/var/lib/postgresql/data
-          - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+          - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
 
     steps:
       - name: Checkout repository
