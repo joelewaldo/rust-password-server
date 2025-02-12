@@ -11,17 +11,53 @@ on:
       - develop
 
 jobs:
-  test:
+  setup_docker:
+    name: Setup Docker Containers
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Rust
+      - name: Set Up Docker Compose
+        run: |
+          cd docker
+          docker-compose up -d
+
+      - name: Wait for Databases to Be Ready
+        run: |
+          # Example for PostgreSQL. Adjust according to your DB.
+          until docker exec -it $(docker ps -qf "ancestor=your_db_image") pg_isready -U your_db_user; do
+            echo "Waiting for PostgreSQL to be ready..."
+            sleep 5
+          done
+
+  test:
+    name: Run Rust Tests
+    runs-on: ubuntu-latest
+    needs: setup_docker
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache Cargo dependencies
+      - name: Cache Cargo Dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Run tests
+      - name: Run Tests
         run: cargo test --verbose
+
+  teardown_docker:
+    name: Teardown Docker Containers
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Tear Down Docker Compose
+        run: |
+          cd docker
+          docker-compose down

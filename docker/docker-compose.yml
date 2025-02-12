@@ -10,5 +10,17 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
+  test_db:
+    image: postgres:latest
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "6970:5432"
+    volumes:
+      - pgdata_test:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
 volumes:
   pgdata:
+  pgdata_test:

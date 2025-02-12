@@ -2,7 +2,11 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use crate::bounded_context::utility::encryption::{self, decrypt};
 
-#[derive(Clone)]
+use sqlx::FromRow;
+use sqlx::postgres::PgRow;
+use sqlx::Row;
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct Password {
     pub id: Uuid,
     pub service: String,
@@ -24,16 +28,25 @@ impl Password {
             updated_at: now,
         }
     }
+}
 
-    pub fn decrypt_password(&self, master_key: String) -> String {
-        decrypt(&master_key, &self.nonce, &self.cipher)
+impl<'r> FromRow<'r, PgRow> for Password {
+    fn from_row(row: &'r PgRow) -> Result<Self, sqlx::Error> {
+        Ok(Password {
+            id: row.get("id"),
+            service: row.get("service"),
+            nonce: row.get("nonce"),
+            cipher: row.get("cipher"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bounded_context::utility::encryption::{encrypt, generate_key};
+    use crate::bounded_context::utility::encryption::{encrypt, generate_key, decrypt};
     use uuid::{Uuid, uuid};
     const ID: Uuid = uuid!("00000000-0000-0000-0000-000000000001");
 
@@ -60,7 +73,7 @@ mod tests {
 
         let password = Password::new(ID, "example_service".to_string(), nonce.clone(), cipher.clone());
 
-        let decrypted_password = password.decrypt_password(master_key);
+        let decrypted_password = decrypt(&master_key, &password.nonce, &password.cipher);
         assert_eq!(decrypted_password, plaintext_password);
     }
 
@@ -73,7 +86,7 @@ mod tests {
 
         let password = Password::new(ID, "example_service".to_string(), nonce.clone(), cipher.clone());
 
-        let decrypted_password = password.decrypt_password(master_key);
+        let decrypted_password = decrypt(&master_key, &password.nonce, &password.cipher);
         assert_eq!(decrypted_password, plaintext_password);
     }
 }
