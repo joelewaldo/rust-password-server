@@ -21,6 +21,7 @@ jobs:
         volumes:
           - pgdata_test:/var/lib/postgresql/data
           - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+        options: --health-cmd="pg_isready -U ${{ secrets.POSTGRES_USER }}" --health-timeout=5s --health-start-period=10s --health-retries=5
 
     steps:
       - name: Ensure permissions for docker/init.sql
@@ -36,6 +37,9 @@ jobs:
 
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
+
+      - name: Check PostgreSQL logs
+        run: docker logs $(docker ps -q --filter "name=test_db")
 
       - name: Run tests
         env:
