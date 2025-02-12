@@ -7,4 +7,5 @@ use std::error::Error;
 pub trait PasswordDb {
     async fn save(&mut self, password: Password) -> Result<(), Box<dyn Error>>;
     async fn get_by_id(&mut self, id: Uuid) -> Result<Password, Box<dyn Error>>;
+    async fn delete(&mut self, id: Uuid) -> Result<(), Box<dyn Error>>;
 }
