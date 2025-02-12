@@ -22,11 +22,6 @@ jobs:
           - pgdata_test:/var/lib/postgresql/data
 
     steps:
-      - name: Ensure permissions for docker/init.sql
-        run: |
-          sudo chmod -R 755 ./docker
-          sudo chown -R $USER:$USER ./docker
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
