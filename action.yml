@@ -1,0 +1,12 @@
+name: "Run Rust Tests in Docker"
+description: "Builds and runs Rust tests inside a Docker container"
+inputs:
+  test-command:
+    description: "Command to run tests"
+    required: false
+    default: "cargo test"
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  args:
+    - ${{ inputs.test-command }}
