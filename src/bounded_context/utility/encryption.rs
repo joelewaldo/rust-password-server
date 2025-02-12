@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_decrypt_with_fixed_masterkey() {
-        let master_key = "a3f1b2c4d5e6f7890123456789abcdef0123456789abcdef0123456789abcdef";
+        let master_key = "a3f1b2c4d5e6f7890123456789abcdef0123456789abcdef0123456789abcdea";
         let password = "super_secure_password".to_string();
 
         assert!(is_valid_masterkey(master_key));
