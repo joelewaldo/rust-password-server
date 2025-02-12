@@ -1,63 +1,47 @@
-name: Rust CI
+name: Run Tests with Docker
 
 on:
   push:
     branches:
       - main
-      - develop
   pull_request:
     branches:
       - main
-      - develop
 
 jobs:
-  setup_docker:
-    name: Setup Docker Containers
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set Up Docker Compose
-        run: |
-          cd docker
-          docker-compose up -d
-
-      - name: Wait for Databases to Be Ready
-        run: |
-          # Example for PostgreSQL. Adjust according to your DB.
-          until docker exec -it $(docker ps -qf "ancestor=your_db_image") pg_isready -U your_db_user; do
-            echo "Waiting for PostgreSQL to be ready..."
-            sleep 5
-          done
-
   test:
-    name: Run Rust Tests
     runs-on: ubuntu-latest
-    needs: setup_docker
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
 
-      - name: Install Rust Toolchain
+    services:
+      docker:
+        image: docker:19.03.12
+        options: --privileged
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Set up Docker Compose
+        uses: docker/setup-qemu-action@v2
+
+      - name: Start services using Docker Compose
+        run: |
+          docker-compose -f ./docker/docker-compose.yml up -d  # Adjust the path to your docker-compose.yml
+          sleep 10  # Wait for the DB to fully initialize
+
+      - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache Cargo Dependencies
+      - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Run Tests
-        run: cargo test --verbose
+      - name: Run cargo tests
+        run: cargo test --all
 
-  teardown_docker:
-    name: Teardown Docker Containers
-    runs-on: ubuntu-latest
-    needs: test
-    if: always()
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Tear Down Docker Compose
-        run: |
-          cd docker
-          docker-compose down
+      - name: Shut down Docker Compose services
+        run: docker-compose -f ./docker/docker-compose.yml down
