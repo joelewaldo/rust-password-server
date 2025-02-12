@@ -37,8 +37,13 @@ jobs:
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Check PostgreSQL logs
-        run: docker logs $(docker ps -q --filter "name=test_db")
+      - name: Wait for database to be ready
+        run: |
+          sudo apt-get install -y netcat
+          until nc -zv localhost 5432; do
+            echo "Waiting for database to be ready..."
+            sleep 2
+          done
 
       - name: Run tests
         env:
