@@ -3,7 +3,7 @@ use sqlx::{PgPool, query, query_as};
 use uuid::Uuid;
 use async_trait::async_trait;
 
-use crate::bounded_context::domain::{password::Password, password_db::PasswordDb};
+use crate::bounded_context::domain::{password::Password, password_db::PasswordDb, password_db::SortBy};
 
 pub struct Database {
     pool: PgPool,
@@ -79,5 +79,51 @@ impl PasswordDb for Database {
         } else {
             Ok(())
         }
+    }
+
+    async fn search_by_service(
+        &mut self,
+        search_term: &str,
+    ) -> Result<Vec<Password>, Box<dyn std::error::Error>> {
+        let search_pattern = format!("%{}%", search_term);
+        let passwords = query_as(
+            r#"
+            SELECT id, service, nonce, cipher, created_at, updated_at
+            FROM passwords
+            WHERE service ILIKE $1
+            "#,
+        )
+        .bind(search_pattern)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(passwords)
+    }
+
+    async fn list_sorted(
+        &mut self,
+        sort_by: &SortBy,
+    ) -> Result<Vec<Password>, Box<dyn std::error::Error>> {
+        let order_clause = match sort_by {
+            SortBy::CreatedAtAsc => "created_at ASC",
+            SortBy::CreatedAtDesc => "created_at DESC",
+            SortBy::UpdatedAtAsc => "updated_at ASC",
+            SortBy::UpdatedAtDesc => "updated_at DESC",
+        };
+
+        let query_str = format!(
+            r#"
+            SELECT id, service, nonce, cipher, created_at, updated_at
+            FROM passwords
+            ORDER BY {}
+            "#,
+            order_clause
+        );
+
+        let passwords = query_as(&query_str)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(passwords)
     }
 }

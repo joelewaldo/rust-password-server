@@ -1,7 +1,6 @@
 use rust_password_server::bounded_context::infrastructure::db::postgres_db::*;
-use rust_password_server::bounded_context::domain::{ password::Password, password_db::PasswordDb };
-use sqlx::postgres::PgPoolOptions;
-use sqlx::{PgPool, query};
+use rust_password_server::bounded_context::domain::{ password::Password, password_db::PasswordDb, password_db::SortBy };
+use sqlx::query;
 use uuid::Uuid;
 use chrono::Utc;
 use rust_password_server::bounded_context::infrastructure::config::app_config;
@@ -29,6 +28,11 @@ async fn setup_db(database: &Database) {
     .execute(database.get_pool())
     .await
     .expect("Failed to setup the database");
+
+    query("TRUNCATE TABLE passwords CASCADE")
+        .execute(database.get_pool())
+        .await
+        .expect("Failed to clean test database");
 }
 
 fn assert_datetime_approx_eq(left: DateTime<Utc>, right: DateTime<Utc>, tolerance: Duration) {
@@ -128,4 +132,198 @@ async fn test_delete_password() {
 
     let result = database.get_by_id(test_password.id).await;
     assert!(result.is_err(), "Password should be deleted");
+}
+
+#[tokio::test]
+async fn test_search_by_service() {
+    let mut database = create_test_db().await.expect("Failed to create test db");
+    setup_db(&database).await;
+
+    let passwords = vec![
+        Password {
+            id: Uuid::new_v4(),
+            service: "Gmail Account".to_string(),
+            nonce: "n1".to_string(),
+            cipher: "c1".to_string(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        },
+        Password {
+            id: Uuid::new_v4(),
+            service: "GitHub Login".to_string(),
+            nonce: "n2".to_string(),
+            cipher: "c2".to_string(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        },
+        Password {
+            id: Uuid::new_v4(),
+            service: "Work Email".to_string(),
+            nonce: "n3".to_string(),
+            cipher: "c3".to_string(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        },
+    ];
+
+    for pw in &passwords {
+        database.save(pw.clone()).await.expect("Failed to save password");
+    }
+
+    let results = database.search_by_service("mail")
+        .await
+        .expect("Search failed");
+
+    assert_eq!(results.len(), 2);
+    let services: Vec<String> = results.into_iter().map(|pw| pw.service).collect();
+    assert!(services.contains(&"Gmail Account".to_string()));
+    assert!(services.contains(&"Work Email".to_string()));
+
+    let exact_results = database.search_by_service("GitHub Login")
+        .await
+        .expect("Search failed");
+    assert_eq!(exact_results.len(), 1);
+}
+
+#[tokio::test]
+async fn test_list_sorted_created_at_asc() {
+    let mut database = create_test_db().await.expect("Failed to create test db");
+    setup_db(&database).await;
+
+    let now = Utc::now();
+    let passwords = vec![
+        Password {
+            id: Uuid::new_v4(),
+            service: "Oldest".to_string(),
+            nonce: "n1".to_string(),
+            cipher: "c1".to_string(),
+            created_at: now - Duration::hours(2),
+            updated_at: now,
+        },
+        Password {
+            id: Uuid::new_v4(),
+            service: "Middle".to_string(),
+            nonce: "n2".to_string(),
+            cipher: "c2".to_string(),
+            created_at: now - Duration::hours(1),
+            updated_at: now,
+        },
+        Password {
+            id: Uuid::new_v4(),
+            service: "Newest".to_string(),
+            nonce: "n3".to_string(),
+            cipher: "c3".to_string(),
+            created_at: now,
+            updated_at: now,
+        },
+    ];
+
+    for pw in &passwords {
+        database.save(pw.clone()).await.expect("Failed to save password");
+    }
+
+    let results = database.list_sorted(&SortBy::CreatedAtAsc)
+        .await
+        .expect("Sorting failed");
+
+    assert_eq!(results.len(), 3);
+    assert_eq!(results[0].service, "Oldest");
+    assert_eq!(results[1].service, "Middle");
+    assert_eq!(results[2].service, "Newest");
+}
+
+#[tokio::test]
+async fn test_list_sorted_updated_at_desc() {
+    let mut database = create_test_db().await.expect("Failed to create test db");
+    setup_db(&database).await;
+
+    let now = Utc::now();
+    let passwords = vec![
+        Password {
+            id: Uuid::new_v4(),
+            service: "Updated Recently".to_string(),
+            nonce: "n1".to_string(),
+            cipher: "c1".to_string(),
+            created_at: now - Duration::hours(2),
+            updated_at: now,
+        },
+        Password {
+            id: Uuid::new_v4(),
+            service: "Updated Long Ago".to_string(),
+            nonce: "n2".to_string(),
+            cipher: "c2".to_string(),
+            created_at: now - Duration::hours(3),
+            updated_at: now - Duration::hours(1),
+        },
+    ];
+
+    for pw in &passwords {
+        database.save(pw.clone()).await.expect("Failed to save password");
+    }
+
+    let results = database.list_sorted(&SortBy::UpdatedAtDesc)
+        .await
+        .expect("Sorting failed");
+
+    assert_eq!(results.len(), 2);
+    assert_eq!(results[0].service, "Updated Recently");
+    assert_eq!(results[1].service, "Updated Long Ago");
+}
+
+#[tokio::test]
+async fn test_empty_search_results() {
+    let mut database = create_test_db().await.expect("Failed to create test db");
+    setup_db(&database).await;
+
+    let results = database.search_by_service("nonexistent")
+        .await
+        .expect("Search failed");
+    
+    assert!(results.is_empty());
+}
+
+#[tokio::test]
+async fn test_all_sorting_variants() {
+    let mut database = create_test_db().await.expect("Failed to create test db");
+    setup_db(&database).await;
+
+    let now = Utc::now();
+    let passwords = vec![
+        Password {
+            id: Uuid::new_v4(),
+            service: "A".to_string(),
+            nonce: "n1".to_string(),
+            cipher: "c1".to_string(),
+            created_at: now - Duration::hours(2),
+            updated_at: now - Duration::hours(1),
+        },
+        Password {
+            id: Uuid::new_v4(),
+            service: "B".to_string(),
+            nonce: "n2".to_string(),
+            cipher: "c2".to_string(),
+            created_at: now - Duration::hours(1),
+            updated_at: now,
+        },
+    ];
+
+    for pw in &passwords {
+        database.save(pw.clone()).await.expect("Failed to save password");
+    }
+
+    let test_cases = vec![
+        (SortBy::CreatedAtAsc, vec!["A", "B"]),
+        (SortBy::CreatedAtDesc, vec!["B", "A"]),
+        (SortBy::UpdatedAtAsc, vec!["A", "B"]),
+        (SortBy::UpdatedAtDesc, vec!["B", "A"]),
+    ];
+
+    for (sort_by, expected_order) in test_cases {
+        let results = database.list_sorted(&sort_by)
+            .await
+            .expect("Sorting failed");
+        
+        let services: Vec<&str> = results.iter().map(|pw| pw.service.as_str()).collect();
+        assert_eq!(services, expected_order, "Failed for {:?}", sort_by);
+    }
 }
