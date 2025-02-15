@@ -1,25 +1,35 @@
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgPool, query, query_as};
+use sqlx::pool::PoolConnection;
+use sqlx::Postgres;
 use uuid::Uuid;
 use async_trait::async_trait;
-
+use std::sync::Arc;
 use crate::bounded_context::domain::{password::Password, password_db::PasswordDb, password_db::SortBy};
 
+#[derive(Clone)]
 pub struct Database {
-    pool: PgPool,
+    pool: Arc<PgPool>,
 }
 
 impl Database {
+    /// Creates a new database connection pool
     pub async fn new(connection: &str, max_connections: u32) -> Result<Self, sqlx::Error> {
         let pool = PgPoolOptions::new()
             .max_connections(max_connections)
             .connect(connection)
             .await?;
-        Ok(Self { pool })
+        Ok(Self { pool: Arc::new(pool) })
     }
 
-    pub fn get_pool(&self) -> &PgPool {
-        &self.pool
+    /// Get a reference to the connection pool
+    pub fn get_pool(&self) -> Arc<PgPool> {
+        Arc::clone(&self.pool)
+    }
+
+    /// Acquire a new database connection for transactional queries
+    pub async fn get_connection(&self) -> Result<PoolConnection<Postgres>, sqlx::Error> {
+        self.pool.acquire().await
     }
 }
 
@@ -32,14 +42,14 @@ impl PasswordDb for Database {
             VALUES ($1, $2, $3, $4, $5, $6)
             "#,
         )
-        .bind(password.id)           // ID as Uuid
-        .bind(password.service)      // Service
-        .bind(password.nonce)        // Nonce
-        .bind(password.cipher)       // Cipher
+        .bind(password.id)
+        .bind(password.service)
+        .bind(password.nonce)
+        .bind(password.cipher)
         .bind(password.created_at)
         .bind(password.updated_at)
-        .execute(&self.pool)
-        .await?; // Propagate any errors
+        .execute(&*self.pool)
+        .await?;
 
         Ok(())
     }
@@ -53,7 +63,7 @@ impl PasswordDb for Database {
             "#
         )
         .bind(id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&*self.pool)
         .await?;
 
         match result {
@@ -70,7 +80,7 @@ impl PasswordDb for Database {
             "#,
         )
         .bind(id)
-        .execute(&self.pool)
+        .execute(&*self.pool)
         .await?
         .rows_affected();
 
@@ -94,7 +104,7 @@ impl PasswordDb for Database {
             "#,
         )
         .bind(search_pattern)
-        .fetch_all(&self.pool)
+        .fetch_all(&*self.pool)
         .await?;
 
         Ok(passwords)
@@ -121,7 +131,7 @@ impl PasswordDb for Database {
         );
 
         let passwords = query_as(&query_str)
-            .fetch_all(&self.pool)
+            .fetch_all(&*self.pool)
             .await?;
 
         Ok(passwords)

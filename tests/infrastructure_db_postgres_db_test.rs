@@ -1,19 +1,26 @@
 use rust_password_server::bounded_context::infrastructure::db::postgres_db::*;
-use rust_password_server::bounded_context::domain::{ password::Password, password_db::PasswordDb, password_db::SortBy };
-use sqlx::query;
+use rust_password_server::bounded_context::domain::{password::Password, password_db::PasswordDb, password_db::SortBy};
+use sqlx::{query, Executor, PgPool};
 use uuid::Uuid;
 use chrono::Utc;
+use tokio::sync::OnceCell;
 use rust_password_server::bounded_context::infrastructure::config::app_config;
 use chrono::{DateTime, Duration};
 
-async fn create_test_db() -> Result<Database, sqlx::Error> {
-    let config = app_config::load_config();
-    let connection_str = &config.test_db_url;
-    Database::new(connection_str, 1).await
+static DB_INSTANCE: OnceCell<tokio::sync::Mutex<Database>> = OnceCell::const_new();
+
+async fn get_test_database() -> &'static tokio::sync::Mutex<Database> {
+    DB_INSTANCE.get_or_init(|| async {
+        let config = app_config::load_config();
+        let base_db_url = &config.test_db_url;
+        tokio::sync::Mutex::new(Database::new(base_db_url, 1).await.expect("Failed to create test DB"))
+    }).await
 }
 
 async fn setup_db(database: &Database) {
-    query(
+    let mut conn = database.get_connection().await.expect("Failed to get DB connection");
+
+    conn.execute(
         r#"
         CREATE TABLE IF NOT EXISTS passwords (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -25,12 +32,10 @@ async fn setup_db(database: &Database) {
         )
         "#,
     )
-    .execute(database.get_pool())
     .await
     .expect("Failed to setup the database");
 
-    query("TRUNCATE TABLE passwords CASCADE")
-        .execute(database.get_pool())
+    conn.execute("TRUNCATE TABLE passwords CASCADE")
         .await
         .expect("Failed to clean test database");
 }
@@ -42,7 +47,7 @@ fn assert_datetime_approx_eq(left: DateTime<Utc>, right: DateTime<Utc>, toleranc
 
 #[tokio::test]
 async fn test_save_and_get_password() {
-    let mut database = create_test_db().await.expect("Failed to create test db");
+    let mut database = get_test_database().await.lock().await;
     setup_db(&database).await;
 
     let test_password = Password {
@@ -72,7 +77,7 @@ async fn test_save_and_get_password() {
 
 #[tokio::test]
 async fn test_get_by_id() {
-    let mut database = create_test_db().await.expect("Failed to create test db");
+    let mut database = get_test_database().await.lock().await;
     setup_db(&database).await;
 
     let test_password = Password {
@@ -111,7 +116,7 @@ async fn test_get_by_id() {
 
 #[tokio::test]
 async fn test_delete_password() {
-    let mut database = create_test_db().await.expect("Failed to create test db");
+    let mut database = get_test_database().await.lock().await;
     setup_db(&database).await;
 
     let test_password = Password {
@@ -136,7 +141,7 @@ async fn test_delete_password() {
 
 #[tokio::test]
 async fn test_search_by_service() {
-    let mut database = create_test_db().await.expect("Failed to create test db");
+    let mut database = get_test_database().await.lock().await;
     setup_db(&database).await;
 
     let passwords = vec![
@@ -187,7 +192,7 @@ async fn test_search_by_service() {
 
 #[tokio::test]
 async fn test_list_sorted_created_at_asc() {
-    let mut database = create_test_db().await.expect("Failed to create test db");
+    let mut database = get_test_database().await.lock().await;
     setup_db(&database).await;
 
     let now = Utc::now();
@@ -234,7 +239,7 @@ async fn test_list_sorted_created_at_asc() {
 
 #[tokio::test]
 async fn test_list_sorted_updated_at_desc() {
-    let mut database = create_test_db().await.expect("Failed to create test db");
+    let mut database = get_test_database().await.lock().await;
     setup_db(&database).await;
 
     let now = Utc::now();
@@ -272,7 +277,7 @@ async fn test_list_sorted_updated_at_desc() {
 
 #[tokio::test]
 async fn test_empty_search_results() {
-    let mut database = create_test_db().await.expect("Failed to create test db");
+    let mut database = get_test_database().await.lock().await;
     setup_db(&database).await;
 
     let results = database.search_by_service("nonexistent")
@@ -284,7 +289,7 @@ async fn test_empty_search_results() {
 
 #[tokio::test]
 async fn test_all_sorting_variants() {
-    let mut database = create_test_db().await.expect("Failed to create test db");
+    let mut database = get_test_database().await.lock().await;
     setup_db(&database).await;
 
     let now = Utc::now();
