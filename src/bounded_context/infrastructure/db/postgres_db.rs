@@ -23,8 +23,8 @@ impl Database {
     }
 
     /// Get a reference to the connection pool
-    pub fn get_pool(&self) -> Arc<PgPool> {
-        Arc::clone(&self.pool)
+    pub fn get_pool(&self) -> &PgPool {
+        &self.pool
     }
 
     /// Acquire a new database connection for transactional queries
