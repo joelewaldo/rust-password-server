@@ -1,3 +1,13 @@
+### Table of Contents
+
+1. [Create Password](#create-password)
+2. [Delete Password](#delete-password)
+3. [Get Password](#get-password)
+4. [Search Password](#search-password)
+5. [Sort Passwords](#sort-passwords)
+
+---
+
 ### **Route: Create Password**
 
 #### **Description**
@@ -7,7 +17,7 @@ This route allows clients to create and store a new password entry in the databa
 #### **Endpoint**
 
 - **Method:** `POST`
-- **Path:** `/passwords`
+- **Path:** `/api/password/create`
 
 #### **Request Body**
 
@@ -87,7 +97,7 @@ The request body should be a JSON object with the following fields:
 #### **Example Usage**
 
 ```bash
-curl -X POST http://localhost:3000/passwords \
+curl -X POST http://localhost:3000/api/password/create \
 -H "Content-Type: application/json" \
 -d '{
   "service": "example.com",
@@ -123,7 +133,7 @@ This route allows clients to delete a stored password entry from the database us
 #### **Endpoint**
 
 - **Method:** `POST`
-- **Path:** `/passwords/delete`
+- **Path:** `/api/password/delete`
 
 #### **Request Body**
 
@@ -186,7 +196,7 @@ The request body should be a JSON object with the following field:
 #### **Example Usage**
 
 ```bash
-curl -X POST http://localhost:3000/passwords/delete \
+curl -X POST http://localhost:3000/api/password/delete \
 -H "Content-Type: application/json" \
 -d '{
   "id": "b9b7f790-d9f1-4e16-a2a9-b9b0b3f924f5"
@@ -218,7 +228,7 @@ This route allows clients to retrieve a stored password entry from the database 
 #### **Endpoint**
 
 - **Method:** `GET`
-- **Path:** `/passwords`
+- **Path:** `/api/password/`
 
 #### **Query Parameters**
 
@@ -283,7 +293,7 @@ GET /passwords?id=b9b7f790-d9f1-4e16-a2a9-b9b0b3f924f5
 #### **Example Usage**
 
 ```bash
-curl -X GET "http://localhost:3000/passwords?id=b9b7f790-d9f1-4e16-a2a9-b9b0b3f924f5"
+curl -X GET "http://localhost:3000/api/password/id=b9b7f790-d9f1-4e16-a2a9-b9b0b3f924f5"
 ```
 
 **Successful Response:**
@@ -315,7 +325,7 @@ This route allows clients to search for stored password entries in the database 
 #### **Endpoint**
 
 - **Method:** `GET`
-- **Path:** `/passwords/search`
+- **Path:** `/api/password/search`
 
 #### **Query Parameters**
 
@@ -395,7 +405,7 @@ GET /passwords/search?search_term=example&page=1&page_size=10
 #### **Example Usage**
 
 ```bash
-curl -X GET "http://localhost:3000/passwords/search?search_term=example&page=1&page_size=10"
+curl -X GET "http://localhost:3000/api/password/search?search_term=example&page=1&page_size=10"
 ```
 
 **Successful Response:**
@@ -436,7 +446,7 @@ This route allows clients to sort stored password entries in the database based 
 #### **Endpoint**
 
 - **Method:** `GET`
-- **Path:** `/passwords/sort`
+- **Path:** `/api/password/sort`
 
 #### **Query Parameters**
 
@@ -522,7 +532,7 @@ GET /passwords/sort?sort_by=created_at&page=1&page_size=10
 #### **Example Usage**
 
 ```bash
-curl -X GET "http://localhost:3000/passwords/sort?sort_by=created_at&page=1&page_size=10"
+curl -X GET "http://localhost:3000/api/password/sort_by=created_at&page=1&page_size=10"
 ```
 
 **Successful Response:**
