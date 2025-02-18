@@ -11,7 +11,7 @@ use crate::bounded_context::infrastructure::config::app_config::AppConfig;
 #[derive(Clone)]
 pub struct Database {
     pool: Arc<PgPool>,
-    config: AppConfig,
+    pub config: AppConfig,
 }
 
 impl Database {

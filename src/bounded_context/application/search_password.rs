@@ -30,7 +30,11 @@ pub async fn search_password(
     let mut db = database;
 
     let page = payload.page.unwrap_or(1);
-    let page_size = payload.page_size.unwrap_or(20);
+    let page_size = payload.page_size.unwrap_or(db.config.pagination_max_size);
+
+    if page_size >= db.config.pagination_max_size {
+        return Err((axum::http::StatusCode::BAD_REQUEST, "Max Pagination Size Exceeded".to_string()))
+    }
 
     match db.search_by_service(&payload.search_term, page, page_size).await {
         Ok(passwords) => Ok(Json(passwords)),

@@ -13,7 +13,7 @@ async fn get_test_database() -> &'static tokio::sync::Mutex<Database> {
     DB_INSTANCE.get_or_init(|| async {
         let config = app_config::load_config();
         let base_db_url = &config.test_db_url;
-        tokio::sync::Mutex::new(Database::new(base_db_url, 1).await.expect("Failed to create test DB"))
+        tokio::sync::Mutex::new(Database::new(base_db_url, 1, config.clone()).await.expect("Failed to create test DB"))
     }).await
 }
 
