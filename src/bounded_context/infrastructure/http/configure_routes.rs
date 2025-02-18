@@ -15,9 +15,12 @@ use axum::{
 pub fn configure_routes(database: Database) -> Router {
     Router::new()
         .route("/test", get(index))
-        .route("/password/search", get(search_password))
-        .route("/password/passwords", get(sort_passwords))
-        .route("/password/create", post(create_password))
-        .route("/password/delete", post(delete_password))
-        .with_state(database)
+        .nest("/password", 
+        Router::new()
+            .route("/search", get(search_password))
+            .route("/passwords", get(sort_passwords))
+            .route("/create", post(create_password))
+            .route("/delete", post(delete_password))
+            .with_state(database)
+        )
 }
