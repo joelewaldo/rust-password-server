@@ -94,25 +94,35 @@ impl PasswordDb for Database {
     async fn search_by_service(
         &mut self,
         search_term: &str,
+        page: u32,
+        page_size: u32,
     ) -> Result<Vec<Password>, Box<dyn std::error::Error>> {
         let search_pattern = format!("%{}%", search_term);
+    
+        let offset = (page - 1) * page_size;
+    
         let passwords = query_as(
             r#"
             SELECT id, service, nonce, cipher, created_at, updated_at
             FROM passwords
             WHERE service ILIKE $1
+            LIMIT $2 OFFSET $3
             "#,
         )
         .bind(search_pattern)
+        .bind(page_size as i64)
+        .bind(offset as i64)
         .fetch_all(&*self.pool)
         .await?;
-
+    
         Ok(passwords)
     }
 
     async fn list_sorted(
         &mut self,
         sort_by: &SortBy,
+        page: u32,
+        page_size: u32,
     ) -> Result<Vec<Password>, Box<dyn std::error::Error>> {
         let order_clause = match sort_by {
             SortBy::CreatedAtAsc => "created_at ASC",
@@ -120,20 +130,25 @@ impl PasswordDb for Database {
             SortBy::UpdatedAtAsc => "updated_at ASC",
             SortBy::UpdatedAtDesc => "updated_at DESC",
         };
-
+    
+        let offset = (page - 1) * page_size;
+    
         let query_str = format!(
             r#"
             SELECT id, service, nonce, cipher, created_at, updated_at
             FROM passwords
             ORDER BY {}
+            LIMIT $1 OFFSET $2
             "#,
             order_clause
         );
-
+    
         let passwords = query_as(&query_str)
+            .bind(page_size as i64)
+            .bind(offset as i64)
             .fetch_all(&*self.pool)
             .await?;
-
+    
         Ok(passwords)
     }
 }

@@ -19,6 +19,8 @@ pub enum SearchPasswordError {
 #[derive(Deserialize)]
 pub struct SearchPasswordInput {
     search_term: String,
+    page: Option<u32>,
+    page_size: Option<u32>,
 }
 
 pub async fn search_password(
@@ -27,7 +29,10 @@ pub async fn search_password(
 ) -> Result<Json<Vec<Password>>, (axum::http::StatusCode, String)> {
     let mut db = database;
 
-    match db.search_by_service(&payload.search_term).await {
+    let page = payload.page.unwrap_or(1);
+    let page_size = payload.page_size.unwrap_or(20);
+
+    match db.search_by_service(&payload.search_term, page, page_size).await {
         Ok(passwords) => Ok(Json(passwords)),
         Err(err) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, err.to_string())),
     }

@@ -42,10 +42,14 @@ pub trait PasswordDb {
     async fn search_by_service(
         &mut self,
         search_term: &str,
+        page: u32,
+        page_size: u32,
     ) -> Result<Vec<Password>, Box<dyn std::error::Error>>;
 
     async fn list_sorted(
         &mut self,
         sort_by: &SortBy,
+        page: u32,
+        page_size: u32,
     ) -> Result<Vec<Password>, Box<dyn std::error::Error>>;
 }

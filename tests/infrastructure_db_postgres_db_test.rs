@@ -175,7 +175,9 @@ async fn test_search_by_service() {
         database.save(pw.clone()).await.expect("Failed to save password");
     }
 
-    let results = database.search_by_service("mail")
+    // Test pagination
+    let results = database
+        .search_by_service("mail", 1, 10)
         .await
         .expect("Search failed");
 
@@ -184,7 +186,9 @@ async fn test_search_by_service() {
     assert!(services.contains(&"Gmail Account".to_string()));
     assert!(services.contains(&"Work Email".to_string()));
 
-    let exact_results = database.search_by_service("GitHub Login")
+    // Test exact match
+    let exact_results = database
+        .search_by_service("GitHub Login", 1, 10)
         .await
         .expect("Search failed");
     assert_eq!(exact_results.len(), 1);
@@ -227,7 +231,7 @@ async fn test_list_sorted_created_at_asc() {
         database.save(pw.clone()).await.expect("Failed to save password");
     }
 
-    let results = database.list_sorted(&SortBy::CreatedAtAsc)
+    let results = database.list_sorted(&SortBy::CreatedAtAsc, 1, 10)
         .await
         .expect("Sorting failed");
 
@@ -266,7 +270,7 @@ async fn test_list_sorted_updated_at_desc() {
         database.save(pw.clone()).await.expect("Failed to save password");
     }
 
-    let results = database.list_sorted(&SortBy::UpdatedAtDesc)
+    let results = database.list_sorted(&SortBy::UpdatedAtDesc, 1, 10)
         .await
         .expect("Sorting failed");
 
@@ -280,7 +284,8 @@ async fn test_empty_search_results() {
     let mut database = get_test_database().await.lock().await;
     setup_db(&database).await;
 
-    let results = database.search_by_service("nonexistent")
+    let results = database
+        .search_by_service("nonexistent", 1, 10)
         .await
         .expect("Search failed");
     
@@ -324,11 +329,53 @@ async fn test_all_sorting_variants() {
     ];
 
     for (sort_by, expected_order) in test_cases {
-        let results = database.list_sorted(&sort_by)
+        let results = database.list_sorted(&sort_by, 1, 10)
             .await
             .expect("Sorting failed");
         
         let services: Vec<&str> = results.iter().map(|pw| pw.service.as_str()).collect();
         assert_eq!(services, expected_order, "Failed for {:?}", sort_by);
     }
+}
+
+#[tokio::test]
+async fn test_search_by_service_pagination() {
+    let mut database = get_test_database().await.lock().await;
+    setup_db(&database).await;
+
+    for i in 0..10 {
+        let password = Password {
+            id: Uuid::new_v4(),
+            service: format!("Service {}", i),
+            nonce: format!("n{}", i),
+            cipher: format!("c{}", i),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        database.save(password).await.expect("Failed to save password");
+    }
+
+    let page1 = database
+        .search_by_service("Service", 1, 5)
+        .await
+        .expect("Search failed");
+    assert_eq!(page1.len(), 5);
+
+    let page2 = database
+        .search_by_service("Service", 2, 5)
+        .await
+        .expect("Search failed");
+    assert_eq!(page2.len(), 5);
+
+    let page1_services: Vec<String> = page1.into_iter().map(|pw| pw.service).collect();
+    let page2_services: Vec<String> = page2.into_iter().map(|pw| pw.service).collect();
+    for service in page1_services {
+        assert!(!page2_services.contains(&service));
+    }
+
+    let page3 = database
+        .search_by_service("Service", 3, 5)
+        .await
+        .expect("Search failed");
+    assert!(page3.is_empty());
 }
