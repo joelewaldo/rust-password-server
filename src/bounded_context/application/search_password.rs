@@ -1,26 +1,34 @@
-use crate::bounded_context::domain::{password_db::PasswordDb, password::Password, password_db::SortBy};
+use axum::{Json, extract::State, extract::Query};
+use crate::bounded_context::infrastructure::db::postgres_db::Database;
+use crate::bounded_context::domain::password_db::PasswordDb;
+use crate::bounded_context::domain::password::Password;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Serialize)]
+pub struct ResponseMessage {
+    message: String,
+}
+
+#[derive(Error, Debug)]
 pub enum SearchPasswordError {
     #[error("Database error: {0}")]
     DatabaseError(#[from] Box<dyn std::error::Error>),
 }
 
-pub struct SearchPassword {
-    password_db: Box<dyn PasswordDb>,
+#[derive(Deserialize)]
+pub struct SearchPasswordInput {
+    search_term: String,
 }
 
-impl SearchPassword {
-    pub fn new(password_db: Box<dyn PasswordDb>) -> Self {
-        SearchPassword { password_db }
-    }
+pub async fn search_password(
+    State(database): State<Database>,
+    Query(payload): Query<SearchPasswordInput>,
+) -> Result<Json<Vec<Password>>, (axum::http::StatusCode, String)> {
+    let mut db = database;
 
-    pub async fn execute(
-        &mut self,
-        search_term: &str,
-    ) -> Result<Vec<Password>, SearchPasswordError> {
-        let passwords = self.password_db.search_by_service(search_term).await.map_err(SearchPasswordError::DatabaseError)?;
-        Ok(passwords)
+    match db.search_by_service(&payload.search_term).await {
+        Ok(passwords) => Ok(Json(passwords)),
+        Err(err) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, err.to_string())),
     }
 }

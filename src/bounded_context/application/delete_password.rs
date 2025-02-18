@@ -1,45 +1,34 @@
-use crate::bounded_context::domain::{password_db::PasswordDb, password::Password};
+use axum::{Json, extract::State};
+use crate::bounded_context::infrastructure::db::postgres_db::Database;
+use crate::bounded_context::domain::password_db::PasswordDb;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use thiserror::Error;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Deserialize)]
 pub struct DeletePasswordInput {
-    pub id: String,
+    id: String,
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct DeletePasswordOutput {
-    pub id: String,
+#[derive(Serialize)]
+pub struct ResponseMessage {
+    message: String,
 }
 
-#[derive(Debug, Error)]
-pub enum DeletePasswordError {
-    #[error("Password not found.")]
-    PasswordNotFound,
+pub async fn delete_password(
+    State(database): State<Database>,
+    Json(payload): Json<DeletePasswordInput>,
+) -> Result<Json<ResponseMessage>, (axum::http::StatusCode, String)> {
+    let id = match Uuid::parse_str(&payload.id) {
+        Ok(uuid) => uuid,
+        Err(_) => return Err((axum::http::StatusCode::BAD_REQUEST, "Invalid password ID.".to_string())),
+    };
 
-    #[error("Database error: {0}")]
-    DatabaseError(#[from] Box<dyn std::error::Error>),
-}
+    let mut db = database;
 
-pub struct DeletePassword {
-    password_db: Box<dyn PasswordDb>,
-}
-
-impl DeletePassword {
-    pub fn new(password_db: Box<dyn PasswordDb>) -> Self {
-        DeletePassword { password_db }
-    }
-
-    pub async fn execute(
-        &mut self,
-        input: DeletePasswordInput,
-    ) -> Result<DeletePasswordOutput, DeletePasswordError> {
-        let id = Uuid::parse_str(&input.id).map_err(|_| DeletePasswordError::PasswordNotFound)?;
-
-        self.password_db.delete(id).await.map_err(DeletePasswordError::DatabaseError)?;
-
-        Ok(DeletePasswordOutput {
-            id: input.id,
-        })
+    match db.delete(id).await {
+        Ok(_) => Ok(Json(ResponseMessage {
+            message: "Password deleted successfully".to_string(),
+        })),
+        Err(err) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, err.to_string())),
     }
 }

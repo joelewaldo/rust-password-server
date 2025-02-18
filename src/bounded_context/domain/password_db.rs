@@ -2,6 +2,14 @@ use super::password::Password;
 use uuid::Uuid;
 use async_trait::async_trait;
 use std::error::Error;
+use std::str::FromStr;
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum SortByError {
+    #[error("Invalid sort option: {0}")]
+    InvalidOption(String),
+}
 
 #[derive(Debug)]
 pub enum SortBy {
@@ -9,6 +17,20 @@ pub enum SortBy {
     CreatedAtDesc,
     UpdatedAtAsc,
     UpdatedAtDesc,
+}
+
+impl FromStr for SortBy {
+    type Err = SortByError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "CreatedAtAsc" => Ok(SortBy::CreatedAtAsc),
+            "CreatedAtDesc" => Ok(SortBy::CreatedAtDesc),
+            "UpdatedAtAsc" => Ok(SortBy::UpdatedAtAsc),
+            "UpdatedAtDesc" => Ok(SortBy::UpdatedAtDesc),
+            _ => Err(SortByError::InvalidOption(s.to_string())),
+        }
+    }
 }
 
 #[async_trait]

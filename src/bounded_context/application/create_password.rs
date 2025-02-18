@@ -1,65 +1,53 @@
+use axum::{Json, extract::State};
+use crate::bounded_context::domain::password::Password;
+use crate::bounded_context::infrastructure::db::postgres_db::Database;
+use crate::bounded_context::domain::password_db::PasswordDb;
 use crate::bounded_context::utility::encryption::{is_valid_cipher, is_valid_nonce};
-use crate::bounded_context::domain::{password_db::PasswordDb, password::Password};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use thiserror::Error;
+use chrono::{DateTime, Utc};
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct CreatePasswordInput {
-    pub service: String,
-    pub nonce: String,
-    pub cipher: String,
+#[derive(Deserialize)]
+pub struct NewPassword {
+    service: String,
+    nonce: String,
+    cipher: String,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct CreatePasswordOutput {
-    pub id: String,
-    pub service: String,
-    pub nonce: String,
-    pub cipher: String,
+#[derive(Serialize)]
+pub struct ResponseMessage {
+    message: String,
 }
 
-#[derive(Debug, Error)]
-pub enum CreatePasswordError {
-    #[error("Invalid nonce provided.")]
-    InvalidNonce,
-    
-    #[error("Invalid cipher provided.")]
-    InvalidCipher,
-    
-    #[error("Database error: {0}")]
-    DatabaseError(#[from] Box<dyn std::error::Error>),
-}
-
-pub struct CreatePassword {
-    password_db: Box<dyn PasswordDb>,
-}
-
-impl CreatePassword {
-    pub fn new(password_db: Box<dyn PasswordDb>) -> Self {
-        CreatePassword { password_db }
+pub async fn create_password(
+    State(database): State<Database>,
+    Json(payload): Json<NewPassword>,
+) -> Result<Json<ResponseMessage>, (axum::http::StatusCode, String)> {
+    if !is_valid_nonce(&payload.nonce) {
+        return Err((axum::http::StatusCode::BAD_REQUEST, "Invalid nonce provided.".to_string()));
     }
 
-    pub async fn execute(
-        &mut self,
-        input: CreatePasswordInput,
-    ) -> Result<CreatePasswordOutput, CreatePasswordError> {
-        if !is_valid_nonce(&input.nonce) {
-            return Err(CreatePasswordError::InvalidNonce);
-        }
+    if !is_valid_cipher(&payload.cipher) {
+        return Err((axum::http::StatusCode::BAD_REQUEST, "Invalid cipher provided.".to_string()));
+    }
 
-        if !is_valid_cipher(&input.cipher) {
-            return Err(CreatePasswordError::InvalidCipher);
-        }
+    let password = Password {
+        id: Uuid::new_v4(),
+        service: payload.service,
+        nonce: payload.nonce,
+        cipher: payload.cipher,
+        created_at: payload.created_at,
+        updated_at: payload.updated_at,
+    };
 
-        let id = Uuid::new_v4();
-        let password = Password::new(id, input.service.clone(), input.nonce.clone(), input.cipher.clone());
-        self.password_db.save(password).await.map_err(CreatePasswordError::DatabaseError)?;
+    let mut db = database;
 
-        Ok(CreatePasswordOutput {
-            id: id.to_string(),
-            service: input.service,
-            nonce: input.nonce,
-            cipher: input.cipher,
-        })
+    match db.save(password).await {
+        Ok(_) => Ok(Json(ResponseMessage {
+            message: "Password saved successfully".to_string(),
+        })),
+        Err(err) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, err.to_string())),
     }
 }

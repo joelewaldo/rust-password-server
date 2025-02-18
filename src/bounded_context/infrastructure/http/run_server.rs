@@ -15,6 +15,7 @@ use crate::bounded_context::infrastructure::{
     http::configure_routes::configure_routes, 
     http::shutdown::shutdown_signal,
     config::app_config::AppConfig, 
+    db::postgres_db::Database
 };
 
 pub async fn run_server(config: AppConfig) {
@@ -32,7 +33,9 @@ pub async fn run_server(config: AppConfig) {
         .with(tracing_subscriber::fmt::layer().without_time())
         .init();
 
-    let app = Router::new().nest("/api", configure_routes()).layer((
+    let database = Database::new(&config.db_url, config.max_connections).await.expect("Failed to connect to db.");
+
+    let app = Router::new().nest("/api", configure_routes(database)).layer((
         TraceLayer::new_for_http(),
         TimeoutLayer::new(Duration::from_secs(config.graceful_shutdown_time)),
     ));

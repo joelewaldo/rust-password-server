@@ -1,12 +1,12 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
-use crate::bounded_context::utility::encryption::{self, decrypt};
+use serde::{Serialize, Deserialize};
 
 use sqlx::FromRow;
 use sqlx::postgres::PgRow;
 use sqlx::Row;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Password {
     pub id: Uuid,
     pub service: String,
