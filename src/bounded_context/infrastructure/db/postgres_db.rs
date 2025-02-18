@@ -6,20 +6,22 @@ use uuid::Uuid;
 use async_trait::async_trait;
 use std::sync::Arc;
 use crate::bounded_context::domain::{password::Password, password_db::PasswordDb, password_db::SortBy};
+use crate::bounded_context::infrastructure::config::app_config::AppConfig;
 
 #[derive(Clone)]
 pub struct Database {
     pool: Arc<PgPool>,
+    config: AppConfig,
 }
 
 impl Database {
     /// Creates a new database connection pool
-    pub async fn new(connection: &str, max_connections: u32) -> Result<Self, sqlx::Error> {
+    pub async fn new(connection: &str, max_connections: u32, config: AppConfig) -> Result<Self, sqlx::Error> {
         let pool = PgPoolOptions::new()
             .max_connections(max_connections)
             .connect(connection)
             .await?;
-        Ok(Self { pool: Arc::new(pool) })
+        Ok(Self { pool: Arc::new(pool), config })
     }
 
     /// Get a reference to the connection pool

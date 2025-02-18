@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct AppConfig {
     pub host: String,
     pub port: u64,

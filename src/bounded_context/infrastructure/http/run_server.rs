@@ -33,7 +33,7 @@ pub async fn run_server(config: AppConfig) {
         .with(tracing_subscriber::fmt::layer().without_time())
         .init();
 
-    let database = Database::new(&config.db_url, config.max_connections).await.expect("Failed to connect to db.");
+    let database = Database::new(&config.db_url, config.max_connections, config.clone()).await.expect("Failed to connect to db.");
 
     let app = Router::new().nest("/api", configure_routes(database)).layer((
         TraceLayer::new_for_http(),
