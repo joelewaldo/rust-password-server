@@ -452,16 +452,20 @@ This route allows clients to sort stored password entries in the database based 
 
 The query parameters should include the following fields:
 
-| Field       | Type     | Description                                                                       |
-| ----------- | -------- | --------------------------------------------------------------------------------- |
-| `sort_by`   | `String` | The field by which the results will be sorted (e.g., `created_at`, `updated_at`). |
-| `page`      | `u32`    | (Optional) The page number for pagination (default: 1).                           |
-| `page_size` | `u32`    | (Optional) The number of results per page (default: configured max size).         |
+| Field       | Type     | Description                                                                                             |
+| ----------- | -------- | ------------------------------------------------------------------------------------------------------- |
+| `sort_by`   | `String` | The field by which the results will be sorted. Possible values (case-insensitive, underscores allowed): |
+|             |          | - `created_at_asc` (Sort by creation date, ascending)                                                   |
+|             |          | - `created_at_desc` (Sort by creation date, descending)                                                 |
+|             |          | - `updated_at_asc` (Sort by last update date, ascending)                                                |
+|             |          | - `updated_at_desc` (Sort by last update date, descending)                                              |
+| `page`      | `u32`    | (Optional) The page number for pagination (default: 1).                                                 |
+| `page_size` | `u32`    | (Optional) The number of results per page (default: configured max size).                               |
 
 **Example Query:**
 
 ```http
-GET /passwords/sort?sort_by=created_at&page=1&page_size=10
+GET /api/password/sort?sort_by=created_at_asc&page=1&page_size=10
 ```
 
 #### **Response**
@@ -522,7 +526,14 @@ GET /passwords/sort?sort_by=created_at&page=1&page_size=10
 
 2. **Sort Parameter:**
 
-   - The `sort_by` query parameter must be a valid field by which the passwords can be sorted. If it is invalid, the route returns a `400 Bad Request` error with the message `"Invalid sort parameter"`.
+   - The `sort_by` query parameter must be one of the following valid values (case-insensitive and underscores allowed):
+
+     - `created_at_asc`
+     - `created_at_desc`
+     - `updated_at_asc`
+     - `updated_at_desc`
+
+   - If an invalid value is provided, the route returns a `400 Bad Request` error with the message `"Invalid sort parameter"`.
 
 #### **Database Interaction**
 
@@ -532,7 +543,7 @@ GET /passwords/sort?sort_by=created_at&page=1&page_size=10
 #### **Example Usage**
 
 ```bash
-curl -X GET "http://localhost:3000/api/password/sort_by=created_at&page=1&page_size=10"
+curl -X GET "http://localhost:3000/api/password/sort?sort_by=created_at_asc&page=1&page_size=10"
 ```
 
 **Successful Response:**
