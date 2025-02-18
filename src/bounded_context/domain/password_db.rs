@@ -23,11 +23,13 @@ impl FromStr for SortBy {
     type Err = SortByError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "CreatedAtAsc" => Ok(SortBy::CreatedAtAsc),
-            "CreatedAtDesc" => Ok(SortBy::CreatedAtDesc),
-            "UpdatedAtAsc" => Ok(SortBy::UpdatedAtAsc),
-            "UpdatedAtDesc" => Ok(SortBy::UpdatedAtDesc),
+        let normalized_str = s.to_lowercase().replace('_', "");
+
+        match normalized_str.as_str() {
+            "createdatasc" => Ok(SortBy::CreatedAtAsc),
+            "createdatdesc" => Ok(SortBy::CreatedAtDesc),
+            "updatedatasc" => Ok(SortBy::UpdatedAtAsc),
+            "updatedatdesc" => Ok(SortBy::UpdatedAtDesc),
             _ => Err(SortByError::InvalidOption(s.to_string())),
         }
     }
