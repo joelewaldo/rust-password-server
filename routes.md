@@ -1,10 +1,10 @@
 ### Table of Contents
 
-1. [Create Password](#create-password)
-2. [Delete Password](#delete-password)
-3. [Get Password](#get-password)
-4. [Search Password](#search-password)
-5. [Sort Passwords](#sort-passwords)
+1. [Create Password](#route-create-password)
+2. [Delete Password](#route-delete-password)
+3. [Get Password](#route-get-password)
+4. [Search Password](#route-search-password)
+5. [Sort Passwords](#route-sort-passwords)
 
 ---
 
