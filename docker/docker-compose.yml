@@ -21,6 +21,21 @@ services:
       - pgdata_test:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
+  rust_app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    depends_on:
+      - db
+      - test_db
+    env_file:
+      - .env
+    ports:
+      - "8000:3000"
+    volumes:
+      - ../:/app
+    command: ["cargo", "run"]
+
 volumes:
   pgdata:
   pgdata_test:
