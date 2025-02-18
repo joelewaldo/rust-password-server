@@ -1,5 +1,6 @@
 use crate::bounded_context::infrastructure::http::index_controller::index;
 use crate::bounded_context::application::{
+    get_password::get_password,
     create_password::create_password,
     delete_password::delete_password,
     search_password::search_password,
@@ -17,6 +18,7 @@ pub fn configure_routes(database: Database) -> Router {
         .route("/test", get(index))
         .nest("/password", 
         Router::new()
+            .route("/", get(get_password))
             .route("/search", get(search_password))
             .route("/passwords", get(sort_passwords))
             .route("/create", post(create_password))
