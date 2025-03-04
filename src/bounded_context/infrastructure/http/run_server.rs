@@ -10,6 +10,7 @@ use tracing_subscriber::{
     layer::SubscriberExt, 
     util::SubscriberInitExt
 };
+use tower_http::cors::{Any, CorsLayer};
 
 use crate::bounded_context::infrastructure::{
     http::configure_routes::configure_routes, 
@@ -35,7 +36,12 @@ pub async fn run_server(config: AppConfig) {
 
     let database = Database::new(&config.db_url, config.max_connections, config.clone()).await.expect("Failed to connect to db.");
 
-    let app = Router::new().nest("/api", configure_routes(database)).layer((
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
+    let app = Router::new().nest("/api", configure_routes(database)).layer(cors).layer((
         TraceLayer::new_for_http(),
         TimeoutLayer::new(Duration::from_secs(config.graceful_shutdown_time)),
     ));
