@@ -1,4 +1,4 @@
-use crate::bounded_context::infrastructure::http::index_controller::index;
+use crate::bounded_context::infrastructure::http::status_controller::status_handler;
 use crate::bounded_context::application::{
     get_password::get_password,
     create_password::create_password,
@@ -15,7 +15,7 @@ use axum::{
 
 pub fn configure_routes(database: Database) -> Router {
     Router::new()
-        .route("/test", get(index))
+        .route("/status", get(status_handler))
         .nest("/password", 
         Router::new()
             .route("/", get(get_password))

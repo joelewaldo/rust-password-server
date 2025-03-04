@@ -5,6 +5,7 @@
 3. [Get Password](#route-get-password)
 4. [Search Password](#route-search-password)
 5. [Sort Passwords](#route-sort-passwords)
+6. [Status](#route-status)
 
 ---
 
@@ -108,22 +109,6 @@ curl -X POST http://localhost:3000/api/password/create \
 }'
 ```
 
-**Successful Response:**
-
-```json
-{
-  "message": "Password saved successfully"
-}
-```
-
-**Error Response (Invalid Nonce):**
-
-```json
-{
-  "message": "Invalid nonce provided."
-}
-```
-
 ### **Route: Delete Password**
 
 #### **Description**
@@ -203,22 +188,6 @@ curl -X POST http://localhost:3000/api/password/delete \
 }'
 ```
 
-**Successful Response:**
-
-```json
-{
-  "message": "Password deleted successfully"
-}
-```
-
-**Error Response (Invalid ID):**
-
-```json
-{
-  "message": "Invalid password ID."
-}
-```
-
 ### **Route: Get Password**
 
 #### **Description**
@@ -294,26 +263,6 @@ GET /passwords?id=b9b7f790-d9f1-4e16-a2a9-b9b0b3f924f5
 
 ```bash
 curl -X GET "http://localhost:3000/api/password/id=b9b7f790-d9f1-4e16-a2a9-b9b0b3f924f5"
-```
-
-**Successful Response:**
-
-```json
-{
-  "service": "example.com",
-  "nonce": "valid-nonce-123",
-  "cipher": "encrypted-password-456",
-  "created_at": "2023-10-01T12:00:00Z",
-  "updated_at": "2023-10-01T12:00:00Z"
-}
-```
-
-**Error Response (Invalid ID):**
-
-```json
-{
-  "message": "Invalid password ID."
-}
 ```
 
 ### **Route: Search Password**
@@ -406,35 +355,6 @@ GET /passwords/search?search_term=example&page=1&page_size=10
 
 ```bash
 curl -X GET "http://localhost:3000/api/password/search?search_term=example&page=1&page_size=10"
-```
-
-**Successful Response:**
-
-```json
-[
-  {
-    "service": "example.com",
-    "nonce": "valid-nonce-123",
-    "cipher": "encrypted-password-456",
-    "created_at": "2023-10-01T12:00:00Z",
-    "updated_at": "2023-10-01T12:00:00Z"
-  },
-  {
-    "service": "example.org",
-    "nonce": "valid-nonce-124",
-    "cipher": "encrypted-password-457",
-    "created_at": "2023-10-02T12:00:00Z",
-    "updated_at": "2023-10-02T12:00:00Z"
-  }
-]
-```
-
-**Error Response (Max Pagination Size Exceeded):**
-
-```json
-{
-  "message": "Max Pagination Size Exceeded"
-}
 ```
 
 ### **Route: Sort Passwords**
@@ -546,39 +466,36 @@ GET /api/password/sort?sort_by=created_at_asc&page=1&page_size=10
 curl -X GET "http://localhost:3000/api/password/sort?sort_by=created_at_asc&page=1&page_size=10"
 ```
 
-**Successful Response:**
+### **Route: Status**
 
-```json
-[
-  {
-    "service": "example.com",
-    "nonce": "valid-nonce-123",
-    "cipher": "encrypted-password-456",
-    "created_at": "2023-10-01T12:00:00Z",
-    "updated_at": "2023-10-01T12:00:00Z"
-  },
-  {
-    "service": "example.org",
-    "nonce": "valid-nonce-124",
-    "cipher": "encrypted-password-457",
-    "created_at": "2023-10-02T12:00:00Z",
-    "updated_at": "2023-10-02T12:00:00Z"
-  }
-]
-```
+#### **Description**
 
-**Error Response (Max Pagination Size Exceeded):**
+This route checks to see that status of the backend.
 
-```json
-{
-  "message": "Max Pagination Size Exceeded"
-}
-```
+#### **Endpoint**
 
-**Error Response (Invalid Sort Parameter):**
+- **Method:** `GET`
+- **Path:** `/api/status`
 
-```json
-{
-  "message": "Invalid sort parameter: <error details>"
-}
+#### **Response**
+
+- **Success Response:**
+
+  - **Status Code:** `200 OK`
+  - **Body:** A JSON object with a backend status report.
+    ```json
+    {
+      "healthy": true,
+      "version": "1.0.0"
+    }
+    ```
+
+- **Error Responses:**
+
+  - **Status Code:** `404 Not Found`
+
+#### **Example Usage**
+
+```bash
+curl -X GET http://localhost:3000/api/status/
 ```
